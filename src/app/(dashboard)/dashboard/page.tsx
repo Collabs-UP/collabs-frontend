@@ -161,12 +161,6 @@ export default function DashboardPage() {
                 <button className="btn-join" onClick={handleJoin} disabled={joining}>
                   {joining ? '...' : 'Unirse'}
                 </button>
-                <button
-                  className="btn-join-create"
-                  onClick={() => setShowNewWorkspace(true)}
-                >
-                  + Nuevo espacio
-                </button>
               </div>
             </div>
           </div>
