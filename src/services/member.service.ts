@@ -10,4 +10,8 @@ export const MemberService = {
     )
     return res.data
   },
+  remove: async (workspaceId: string, memberId: string) => {
+    const res = await api.delete(`/workspaces/${workspaceId}/members/${memberId}`)
+    return res.data
+  }
 }

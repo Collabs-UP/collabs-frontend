@@ -5,36 +5,43 @@ export interface LoginDto {
   password: string
 }
 
+export interface AuthResponse {
+  access_token: string
+  token_type: string
+  user: User
+}
+
 export interface RegisterDto {
   name: string
   email: string
   password: string
 }
 
-export interface AuthResponse {
-  access_token: string
-  user: User
-}
-
 // ── USER
-
 export interface User {
   id: string
   name: string
   email: string
 }
 
-// ── WORKSPACE
+interface AuthContextType {
+  user: User | null; 
+  login: (token: string) => void;
+  logout: () => void;
+  
+  setUser: (user: User) => void; 
+}
 
+// ── WORKSPACE
 export type WorkspaceRole = 'OWNER' | 'MEMBER'
 
 export interface Workspace {
   id: string
-  project_name: string
+  projectName: string
   description: string
-  access_code: string
+  accessCode: string
   role: WorkspaceRole
-  created_at: string
+  createdAt: string
   owner: User
   stats: WorkspaceStats
 }
@@ -47,8 +54,8 @@ export interface WorkspaceStats {
 }
 
 export interface CreateWorkspaceDto {
-  project_name: string
-  description: string
+  projectName: string;
+  description: string;
 }
 
 export interface UpdateWorkspaceDto {
@@ -57,11 +64,10 @@ export interface UpdateWorkspaceDto {
 }
 
 export interface JoinWorkspaceDto {
-  access_code: string
+  accessCode: string
 }
 
 // ── MEMBER
-
 export interface Member {
   id: string
   name: string
@@ -78,7 +84,6 @@ export interface MemberTaskStats {
 }
 
 // ── TASK
-
 export type TaskStatus = 'IN_PROCESS' | 'COMPLETED'
 
 export interface Task {
@@ -101,8 +106,8 @@ export interface TaskSummary {
 export interface CreateTaskDto {
   title: string
   description: string
-  assigned_to_id: string
-  due_date: string
+  assignedToId: string
+  dueDate: string
 }
 
 export interface UpdateTaskStatusDto {

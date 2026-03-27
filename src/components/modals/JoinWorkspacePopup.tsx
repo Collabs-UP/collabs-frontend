@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { WorkspaceService } from '@/services/workspace.service'
 import './modals.css'
+import axios from 'axios';
+import { useRouter } from 'next/navigation'
 
 interface Props {
   onClose: () => void
@@ -12,6 +14,7 @@ interface Props {
 export default function JoinWorkspacePopup({ onClose }: Props) {
   const { workspaces, setWorkspaces } = useWorkspace()
   const [code, setCode] = useState('')
+  const router = useRouter();
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -34,11 +37,23 @@ export default function JoinWorkspacePopup({ onClose }: Props) {
     setError('')
     setJoining(true)
     try {
-      const ws = await WorkspaceService.join({ access_code: code.toUpperCase() })
+      const ws = await WorkspaceService.join({ accessCode: code.toUpperCase() })
       setWorkspaces([...workspaces, ws])
       onClose()
-    } catch {
-      setError('Código inválido o ya eres miembro')
+      router.push(`/workspace/${ws.id}/tasks`)
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          setError('Ya eres miembro de este proyecto.');
+        } else if (err.response?.status === 404) {
+          setError('Código no encontrado.');
+        } else {
+          const msg = err.response?.data?.message;
+          setError(Array.isArray(msg) ? msg[0] : (msg || 'Error al unirse.'));
+        }
+      } else {
+        setError('Error al conectar con el servidor.');
+      }
     } finally {
       setJoining(false)
     }

@@ -2,13 +2,13 @@ import axios from 'axios'
 import Cookies from 'js-cookie'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api',
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Interceptor de request — agrega el JWT en cada petición
+// Interceptor de request
 api.interceptors.request.use((config) => {
   const token = Cookies.get('access_token')
   if (token) {
@@ -17,7 +17,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Interceptor de response — maneja errores globales
+// maneja errores globales
 api.interceptors.response.use(
   (response) => response,
   (error) => {

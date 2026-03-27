@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { WorkspaceService } from '@/services/workspace.service'
 import type { Workspace } from '@/types'
+import axios from 'axios'; // Asegúrate de importar axios
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -34,11 +35,23 @@ export default function DashboardPage() {
     if (!joinCode.trim()) return
     setJoining(true)
     try {
-      const ws = await WorkspaceService.join({ access_code: joinCode.toUpperCase() })
+      const ws = await WorkspaceService.join({ accessCode: joinCode.toUpperCase() })
       setWorkspaces([...workspaces, ws])
       setJoinCode('')
-    } catch {
-      alert('Código inválido o ya eres miembro de este espacio')
+      router.push(`/workspace/${ws.id}/tasks`)
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          alert('Ya eres miembro de este proyecto. Búscalo en tu lista.');
+        } else if (err.response?.status === 404) {
+          alert('El código no existe. Verifica que esté bien escrito.');
+        } else {
+          const msg = err.response?.data?.message;
+          alert(Array.isArray(msg) ? msg[0] : (msg || 'Error al unirse al espacio.'));
+        }
+      } else {
+        alert('Error de conexión. Intenta de nuevo.');
+      }
     } finally {
       setJoining(false)
     }
@@ -181,7 +194,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="card-body">
-                  <h3 className="card-name">{ws.project_name}</h3>
+                  <h3 className="card-name">{ws.projectName}</h3>
                   <p className="card-desc">{ws.description}</p>
                   <div className="progress-section">
                     <div className="progress-labels">

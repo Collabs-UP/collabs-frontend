@@ -1,36 +1,72 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import ChangesSavedModal from '@/components/modals/ChangesSavedModal'
 import DeleteAccountModal from '@/components/modals/DeleteAccountModal'
+import { UserService } from '@/services/user.service' 
+import axios from 'axios'
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, setUser, logout } = useAuth()
   const { workspaces } = useWorkspace()
+  
   const [showSaved, setShowSaved] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  
   const [form, setForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
   })
   const [saving, setSaving] = useState(false)
 
+  // Sincroniza el formulario cuando los datos del usuario cargan desde el AuthContext
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name,
+        email: user.email,
+      })
+    }
+  }, [user])
+
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : 'U'
 
-  const completedTasks = workspaces.reduce((a, ws) => a + ws.stats.completed_tasks, 0)
-  const inProcessTasks = workspaces.reduce((a, ws) => a + ws.stats.in_process_tasks, 0)
+  // Cálculo de estadísticas basado en los workspaces del contexto
+  const completedTasks = workspaces.reduce((a, ws) => a + (ws.stats?.completed_tasks || 0), 0)
+  const inProcessTasks = workspaces.reduce((a, ws) => a + (ws.stats?.in_process_tasks || 0), 0)
   const adminCount = workspaces.filter((ws) => ws.role === 'OWNER').length
 
   const handleSave = async () => {
+    if (!form.name.trim()) {
+      alert('El nombre es obligatorio');
+      return;
+    }
+
     setSaving(true)
-    // TODO: reemplazar con PUT /api/users/me cuando el backend esté listo
-    await new Promise((r) => setTimeout(r, 600))
-    setSaving(false)
-    setShowSaved(true)
+    try {
+      // Enviamos solo el nombre según el DTO del backend
+      const updatedUser = await UserService.updateProfile({ name: form.name });
+      
+      // Actualizamos el contexto global para reflejar el cambio en Sidebar/Navbar
+      if (setUser && user) {
+        setUser({ ...user, name: updatedUser.name });
+      }
+      
+      setShowSaved(true)
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        const msg = error.response.data.message;
+        alert(Array.isArray(msg) ? msg[0] : msg);
+      } else {
+        alert('Ocurrió un error al guardar los cambios.');
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   const colorMap: Record<number, string> = {
@@ -39,7 +75,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      {/* Topbar */}
       <header className="topbar">
         <div>
           <h1 className="page-title">Mi Perfil</h1>
@@ -47,12 +82,8 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      {/* Content */}
       <div className="profile-content">
-
-        {/* LEFT — Avatar + Actividad */}
         <div className="profile-left">
-
           <div className="profile-card">
             <div className="profile-avatar-big">
               {initials}
@@ -62,7 +93,7 @@ export default function ProfilePage() {
                 </svg>
               </button>
             </div>
-            <p className="profile-name">{user?.name ?? 'Usuario'}</p>
+            <p className="profile-name">{user?.name ?? 'Cargando...'}</p>
             <p className="profile-email">{user?.email ?? ''}</p>
           </div>
 
@@ -87,13 +118,9 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-
         </div>
 
-        {/* RIGHT — Formularios */}
         <div className="profile-right">
-
-          {/* Información personal */}
           <div className="form-card">
             <h3 className="form-card-title">Información personal</h3>
             <p className="form-card-sub">Actualiza tu nombre y correo electrónico</p>
@@ -114,28 +141,32 @@ export default function ProfilePage() {
                   type="email"
                   className="form-input-sm"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  disabled
+                  style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: '#f5f5f7' }}
                   placeholder="tu@correo.com"
                 />
               </div>
             </div>
-            <div className="form-card-footer">
-              <button
-                className="btn-cancel-sm"
-                onClick={() => setForm({ name: user?.name ?? '', email: user?.email ?? '' })}
-              >
-                Cancelar
-              </button>
-              <button className="btn-save" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-              <button className="btn-delete-account" onClick={() => setShowDelete(true)}>
+            
+            <div className="form-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  className="btn-cancel-sm"
+                  onClick={() => setForm({ name: user?.name ?? '', email: user?.email ?? '' })}
+                >
+                  Cancelar
+                </button>
+                <button className="btn-save" onClick={handleSave} disabled={saving} style={{ background: '#6355E8', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+              
+              <button className="btn-delete-account" onClick={() => setShowDelete(true)} style={{ color: '#E11D48', background: '#E11D4810', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
                 Eliminar cuenta
               </button>
             </div>
           </div>
 
-          {/* Seguridad */}
           <div className="form-card">
             <h3 className="form-card-title">Seguridad</h3>
             <p className="form-card-sub">Administra tu contraseña y sesiones activas</p>
@@ -151,10 +182,12 @@ export default function ProfilePage() {
                 <span className="security-label danger-text">Cerrar sesión</span>
                 <span className="security-sub">Salir de la cuenta en este dispositivo</span>
               </div>
+              <button className="btn-cancel-sm" onClick={logout} style={{ color: '#E11D48', borderColor: '#E11D4830' }}>
+                Cerrar sesión
+              </button>
             </div>
           </div>
 
-          {/* Mis proyectos */}
           {workspaces.length > 0 && (
             <div className="form-card">
               <h3 className="form-card-title">Mis proyectos</h3>
@@ -167,9 +200,9 @@ export default function ProfilePage() {
                       style={{ background: colorMap[i % 5] }}
                     />
                     <div>
-                      <p className="profile-ws-name">{ws.project_name}</p>
+                      <p className="profile-ws-name">{ws.projectName}</p>
                       <p className="profile-ws-meta">
-                        {ws.role === 'OWNER' ? 'Admin' : 'Miembro'} · {ws.stats.total_tasks} tareas
+                        {ws.role === 'OWNER' ? 'Admin' : 'Miembro'} · {ws.stats?.total_tasks || 0} tareas
                       </p>
                     </div>
                     {ws.role === 'OWNER' && (
@@ -182,20 +215,23 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
-
         </div>
       </div>
 
-      {/* Modales */}
       {showSaved && (
         <ChangesSavedModal onContinue={() => setShowSaved(false)} />
       )}
       {showDelete && (
         <DeleteAccountModal
           onCancel={() => setShowDelete(false)}
-          onConfirm={() => {
-            setShowDelete(false)
-            logout()
+          onConfirm={async () => {
+            try {
+                await UserService.deleteAccount();
+                logout();
+            } catch (err: any) {
+                alert(err.response?.data?.message || 'No se pudo eliminar la cuenta');
+                setShowDelete(false);
+            }
           }}
         />
       )}

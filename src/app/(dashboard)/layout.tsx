@@ -3,9 +3,9 @@
 import './dashboard.css'
 import { useAuth } from '@/context/AuthContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import NewWorkspaceModal from '@/components/modals/NewWorkspaceModal'
 import UserDropdown from '@/components/modals/UserDropdown'
 import JoinWorkspacePopup from '@/components/modals/JoinWorkspacePopup'
@@ -15,23 +15,38 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const { activeWorkspace, showNewWorkspace, setShowNewWorkspace } = useWorkspace()
   const pathname = usePathname()
+  const router = useRouter()
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showJoinPopup, setShowJoinPopup] = useState(false)
 
-  // TODO: descomentar cuando el backend esté listo
-  // useEffect(() => {
-  //   if (!isLoading && !isAuthenticated) {
-  //     router.push('/login')
-  //   }
-  // }, [isLoading, isAuthenticated, router])
-  // if (isLoading) return null
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [isLoading, isAuthenticated, router])
 
+  
   const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'U'
+  ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+  : 'U'
+  
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        const hasToken = document.cookie.includes('access_token')
+        if (!hasToken) {
+          window.location.replace('/login')
+        }
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
+  
+  if (isLoading) return null
 
   return (
     <div className="app-layout">
@@ -66,7 +81,7 @@ export default function DashboardLayout({
           {/* Espacio activo */}
           {activeWorkspace && (
             <>
-              <p className="nav-section-label">{activeWorkspace.project_name}</p>
+              <p className="nav-section-label">{activeWorkspace.projectName}</p>
               <Link
                 href={`/workspace/${activeWorkspace.id}/tasks`}
                 className={`nav-item ${pathname.includes('/tasks') ? 'active' : ''}`}

@@ -35,4 +35,9 @@ export const TaskService = {
     const res = await api.patch<Task>(`/tasks/${taskId}/status`, data)
     return res.data
   },
+
+  remove: async (workspaceId: string, taskId: string) => {
+    const res = await api.delete(`/workspaces/${workspaceId}/tasks/${taskId}`);
+    return res.data;
+  }
 }

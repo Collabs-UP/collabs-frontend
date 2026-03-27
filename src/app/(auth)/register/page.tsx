@@ -1,7 +1,7 @@
 'use client'
 
 import '../auth.css'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -26,7 +26,6 @@ function getStrength(password: string): {
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { register } = useAuth()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -37,9 +36,33 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { register, isAuthenticated, isLoading } = useAuth()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [isLoading, isAuthenticated, router])
+
+  
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        // Verifica la cookie directamente, no el estado de React
+        const hasToken = document.cookie.includes('access_token')
+        if (hasToken) {
+          window.location.replace('/dashboard')
+        }
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
   const strength = useMemo(() => getStrength(form.password), [form.password])
-
+  
+  if (isLoading) return null
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -60,7 +83,7 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
       })
-      router.push('/dashboard')
+      router.replace('/dashboard')
     } catch {
       setError('Error al crear la cuenta. Intenta con otro correo.')
     } finally {

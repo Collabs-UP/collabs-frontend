@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { WorkspaceService } from '@/services/workspace.service'
 import './modals.css'
+import axios from 'axios'
 
 const COLORS = [
   '#6355E8', '#0D9488', '#D97706', '#E11D48',
@@ -19,27 +20,60 @@ interface Props {
 export default function NewWorkspaceModal({ onClose }: Props) {
   const router = useRouter()
   const { setActiveWorkspace, workspaces, setWorkspaces } = useWorkspace()
-  const [form, setForm] = useState({ project_name: '', description: '' })
+  const [form, setForm] = useState({ projectName: '', description: '' })
   const [selectedColor, setSelectedColor] = useState(COLORS[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async () => {
-    if (!form.project_name.trim()) {
-      setError('El nombre del proyecto es obligatorio')
-      return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const name = form.projectName.trim();
+    const desc = form.description.trim();
+
+    const validationErrors: string[] = [];
+
+    if (!name) {
+      validationErrors.push('Ingresa un nombre para el proyecto');
+    } else if (name.length < 3) {
+      validationErrors.push('El nombre debe tener al menos 3 caracteres');
     }
-    setLoading(true)
+
+    if (!desc) {
+      validationErrors.push('Agrega una descripción');
+    } else if (desc.length < 5) {
+      validationErrors.push('La descripción debe tener al menos 5 caracteres');
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(' • '));
+      return; 
+    }
+
+    setLoading(true);
     try {
-      const ws = await WorkspaceService.create(form)
-      setWorkspaces([...workspaces, ws])
-      setActiveWorkspace(ws)
-      onClose()
-      router.push(`/workspace/${ws.id}/tasks`)
-    } catch {
-      setError('Error al crear el espacio. Intenta de nuevo.')
+      const newWorkspace = await WorkspaceService.create({
+        projectName: name, 
+        description: desc,
+      });
+      
+      if (workspaces) {
+        setWorkspaces([...workspaces, newWorkspace]);
+      }
+      
+      onClose(); 
+      router.push(`/workspace/${newWorkspace.id}/tasks`);
+      
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        const backendMessage = error.response.data.message;
+        setError(Array.isArray(backendMessage) ? backendMessage.join(' • ') : backendMessage);
+      } else {
+        setError("Ocurrió un error de conexión al crear el espacio.");
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -83,8 +117,8 @@ export default function NewWorkspaceModal({ onClose }: Props) {
                 type="text"
                 className="modal-input"
                 placeholder="Ej. Proyecto Integrador"
-                value={form.project_name}
-                onChange={(e) => setForm({ ...form, project_name: e.target.value })}
+                value={form.projectName} // <-- Corregido
+                onChange={(e) => setForm({ ...form, projectName: e.target.value })} // <-- Corregido
               />
               <p className="modal-hint">Este nombre identificará tu espacio en el dashboard</p>
             </div>
@@ -136,7 +170,7 @@ export default function NewWorkspaceModal({ onClose }: Props) {
                 <span className="preview-role">Admin</span>
               </div>
               <h3 className="preview-name">
-                {form.project_name || 'Nombre del proyecto'}
+                {form.projectName || 'Nombre del proyecto'} {/* <-- Corregido */}
               </h3>
               <p className="preview-desc">
                 {form.description || 'La descripción aparecerá aquí...'}

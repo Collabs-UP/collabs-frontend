@@ -1,18 +1,41 @@
 'use client'
 
 import '../auth.css'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { login, isAuthenticated, isLoading } = useAuth()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [isLoading, isAuthenticated, router])
+
+  
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        // Verifica la cookie directamente, no el estado de React
+        const hasToken = document.cookie.includes('access_token')
+        if (hasToken) {
+          window.location.replace('/dashboard')
+        }
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
+  
+  if (isLoading) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,7 +43,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(form)
-      router.push('/dashboard')
+      router.replace('/dashboard')
     } catch {
       setError('Correo o contraseña incorrectos')
     } finally {

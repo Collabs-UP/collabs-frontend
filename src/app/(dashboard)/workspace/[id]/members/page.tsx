@@ -2,24 +2,43 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { useWorkspace } from '@/context/WorkspaceContext'
 import { MemberService } from '@/services/member.service'
 import type { Member } from '@/types'
+import ConfirmModal from '@/components/modals/ConfirmModal'
+import { WorkspaceService } from '@/services/workspace.service'
 
 export default function WorkspaceMembersPage() {
   const { id } = useParams<{ id: string }>()
-  const { activeWorkspace, setActiveWorkspace, workspaces } = useWorkspace()
+  const { user } = useAuth()
+  const { activeWorkspace, setActiveWorkspace, workspaces, setWorkspaces } = useWorkspace()
+  
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState(false)
+  
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [memberToRemove, setMemberToRemove] = useState<Member | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
+  
+  const isOwner = activeWorkspace?.role === 'OWNER'
 
   useEffect(() => {
-    if (!activeWorkspace && workspaces.length > 0) {
+    if (workspaces.length > 0) {
       const ws = workspaces.find((w) => w.id === id)
-      if (ws) setActiveWorkspace(ws)
+      if (ws && ws.id !== activeWorkspace?.id) {
+        setActiveWorkspace(ws)
+      }
+    } else {
+      WorkspaceService.getAll().then((data) => {
+        if (setWorkspaces) setWorkspaces(data)
+        const ws = data.find((w) => w.id === id)
+        if (ws) setActiveWorkspace(ws)
+      }).catch(() => {})
     }
-  }, [id, activeWorkspace, workspaces, setActiveWorkspace])
+  }, [id, workspaces.length])
 
   useEffect(() => {
     if (!id) return
@@ -30,8 +49,8 @@ export default function WorkspaceMembersPage() {
   }, [id])
 
   const handleCopy = () => {
-    if (!activeWorkspace?.access_code) return
-    navigator.clipboard.writeText(activeWorkspace.access_code)
+    if (!activeWorkspace?.accessCode) return
+    navigator.clipboard.writeText(activeWorkspace.accessCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -48,15 +67,41 @@ export default function WorkspaceMembersPage() {
   const getInitials = (name: string) =>
     name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
-  const totalCompleted = members.reduce((a, m) => a + m.task_stats.completed_tasks, 0)
-  const totalInProcess = members.reduce((a, m) => a + m.task_stats.in_process_tasks, 0)
-  const totalTasks = members.reduce((a, m) => a + m.task_stats.assigned_tasks, 0)
+  const totalCompleted = members.reduce((a, m) => {
+    const stats = (m as any).taskStats || m.task_stats || {};
+    return a + (stats.completedTasks || stats.completed_tasks || 0);
+  }, 0)
+  
+  const totalInProcess = members.reduce((a, m) => {
+    const stats = (m as any).taskStats || m.task_stats || {};
+    return a + (stats.inProcessTasks || stats.in_process_tasks || 0);
+  }, 0)
+  
+  const totalTasks = members.reduce((a, m) => {
+    const stats = (m as any).taskStats || m.task_stats || {};
+    return a + (stats.assignedTasks || stats.assigned_tasks || 0);
+  }, 0)
 
   if (loading) return (
     <div className="loading-screen">
       <div className="loading-spinner" />
     </div>
   )
+
+  const handleRemoveMember = async () => {
+    if (!memberToRemove || !id) return;
+    setIsRemoving(true);
+    try {
+      await MemberService.remove(id, memberToRemove.id);
+      
+      setMembers(members.filter(m => m.id !== memberToRemove.id));
+      setMemberToRemove(null);
+    } catch (error) {
+      alert("Error al eliminar al miembro");
+    } finally {
+      setIsRemoving(false);
+    }
+  }
 
   return (
     <>
@@ -65,7 +110,7 @@ export default function WorkspaceMembersPage() {
         <div>
           <h1 className="page-title">Miembros</h1>
           <p className="page-date">
-            {activeWorkspace?.project_name} · {members.length} miembros
+            {activeWorkspace?.projectName} · {members.length} miembros
           </p>
         </div>
         <div className="topbar-right">
@@ -99,7 +144,7 @@ export default function WorkspaceMembersPage() {
                   className="members-ws-dot"
                   style={{ background: colorList[i % 5] }}
                 />
-                {ws.project_name}
+                {ws.projectName}
               </button>
             ))}
           </div>
@@ -149,7 +194,7 @@ export default function WorkspaceMembersPage() {
           </div>
           <div className="members-code-chip">
             <span className="members-code-label">Código</span>
-            <span className="access-code-val">{activeWorkspace?.access_code ?? '——'}</span>
+            <span className="access-code-val">{activeWorkspace?.accessCode ?? '——'}</span>
             <button className="copy-btn" onClick={handleCopy} title={copied ? '¡Copiado!' : 'Copiar'}>
               {copied ? (
                 <svg viewBox="0 0 14 14" fill="none">
@@ -184,8 +229,14 @@ export default function WorkspaceMembersPage() {
 
             {filtered.map((member) => {
               const color = memberColors[member.id] ?? colorList[0]
-              const pct = member.task_stats.assigned_tasks > 0
-                ? Math.round((member.task_stats.completed_tasks / member.task_stats.assigned_tasks) * 100)
+              
+              const stats = (member as any).taskStats || member.task_stats || {};
+              const assigned = stats.assignedTasks || stats.assigned_tasks || 0;
+              const completed = stats.completedTasks || stats.completed_tasks || 0;
+              const inProcess = stats.inProcessTasks || stats.in_process_tasks || 0;
+
+              const pct = assigned > 0
+                ? Math.round((completed / assigned) * 100)
                 : 0
 
               return (
@@ -202,9 +253,9 @@ export default function WorkspaceMembersPage() {
                       <p className="member-email-text">{member.email}</p>
                     </div>
                   </div>
-                  <div className="member-num">{member.task_stats.assigned_tasks}</div>
-                  <div className="member-num teal">{member.task_stats.completed_tasks}</div>
-                  <div className="member-num amber">{member.task_stats.in_process_tasks}</div>
+                  <div className="member-num">{assigned}</div>
+                  <div className="member-num teal">{completed}</div>
+                  <div className="member-num amber">{inProcess}</div>
                   <div className="member-progress-cell">
                     <div className="member-progress-bar">
                       <div
@@ -219,19 +270,63 @@ export default function WorkspaceMembersPage() {
                       {member.role === 'OWNER' ? 'Admin' : 'Miembro'}
                     </span>
                   </div>
-                  <button className="task-menu-btn">
-                    <svg viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="3" r="1" fill="currentColor"/>
-                      <circle cx="8" cy="8" r="1" fill="currentColor"/>
-                      <circle cx="8" cy="13" r="1" fill="currentColor"/>
-                    </svg>
-                  </button>
+                  
+                  {/* Menú de los 3 puntitos */}
+                  <div style={{ position: 'relative' }}>
+                    {isOwner && member.id !== user?.id && (
+                      <>
+                        <button 
+                          className="task-menu-btn"
+                          onClick={() => setMenuOpenId(menuOpenId === member.id ? null : member.id)}
+                        >
+                          <svg viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="3" r="1" fill="currentColor"/>
+                            <circle cx="8" cy="8" r="1" fill="currentColor"/>
+                            <circle cx="8" cy="13" r="1" fill="currentColor"/>
+                          </svg>
+                        </button>
+
+                        {/* El Dropdown flotante */}
+                        {menuOpenId === member.id && (
+                          <div style={{
+                            position: 'absolute', right: '36px', top: '-5px', marginTop: '4px',
+                            background: 'white', border: '1px solid var(--border)', borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '160px', overflow: 'hidden'
+                          }}>
+                            <button 
+                              onClick={() => { setMemberToRemove(member); setMenuOpenId(null); }}
+                              style={{
+                                width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none',
+                                border: 'none', color: '#E11D48', fontSize: '14px', fontWeight: 500,
+                                cursor: 'pointer'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = '#E11D4810'}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                            >
+                              Eliminar miembro
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
         )}
       </div>
+
+      {/* Renderizamos el Modal al final */}
+      <ConfirmModal
+        isOpen={!!memberToRemove}
+        title="¿Estás seguro de eliminar a este miembro?"
+        subtitle={`Esta acción es irreversible y ${memberToRemove?.name} perderá acceso al proyecto y a sus tareas asignadas.`}
+        confirmText="Eliminar"
+        onConfirm={handleRemoveMember}
+        onCancel={() => setMemberToRemove(null)}
+        isLoading={isRemoving}
+      />
     </>
   )
 }

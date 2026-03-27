@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { MemberService } from '@/services/member.service'
 import { TaskService } from '@/services/task.service'
 import type { Member, Task } from '@/types'
+import axios from 'axios'
 import './modals.css'
 
 interface Props {
@@ -22,28 +23,34 @@ export default function NewTaskModal({
 }: Props) {
   const { user } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
+  
+  // 1. Estado actualizado a camelCase para coincidir con el backend
   const [form, setForm] = useState({
     title: '',
     description: '',
-    assigned_to_id: '',
-    due_date: '',
+    assignedToId: '', 
+    dueDate: '',      
   })
+  
   const [showMemberDropdown, setShowMemberDropdown] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const today = new Date().toISOString().split('T')[0]
+  const isDateInvalid = form.dueDate !== '' && form.dueDate < today
 
   useEffect(() => {
     MemberService.getByWorkspace(workspaceId)
       .then((res) => {
         setMembers(res.members)
         if (res.members.length > 0) {
-          setForm((f) => ({ ...f, assigned_to_id: res.members[0].id }))
+          setForm((f) => ({ ...f, assignedToId: res.members[0].id }))
         }
       })
       .catch(() => {})
   }, [workspaceId])
 
-  const selectedMember = members.find((m) => m.id === form.assigned_to_id)
+  const selectedMember = members.find((m) => m.id === form.assignedToId)
 
   const memberColors: Record<string, string> = {}
   const colorList = ['#6355E8', '#0D9488', '#D97706', '#E11D48', '#3B82F6']
@@ -56,16 +63,24 @@ export default function NewTaskModal({
 
   const handleSubmit = async () => {
     if (!form.title.trim()) { setError('El título es obligatorio'); return }
-    if (!form.assigned_to_id) { setError('Debes asignar un responsable'); return }
-    if (!form.due_date) { setError('La fecha límite es obligatoria'); return }
+    if (!form.assignedToId) { setError('Debes asignar un responsable'); return }
+    if (!form.dueDate) { setError('La fecha límite es obligatoria'); return }
+    if (isDateInvalid) { setError('La fecha límite no puede ser una fecha pasada'); return }
+    
     setError('')
     setLoading(true)
     try {
       const task = await TaskService.create(workspaceId, form)
       onCreated(task)
       onClose()
-    } catch {
-      setError('Error al crear la tarea. Intenta de nuevo.')
+    } catch (err: any) {
+      // 2. Traductor de errores de Axios (igual que en workspaces)
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        const backendMessage = err.response.data.message;
+        setError(Array.isArray(backendMessage) ? backendMessage.join(' • ') : backendMessage);
+      } else {
+        setError('Error al crear la tarea. Verifica tu conexión.');
+      }
     } finally {
       setLoading(false)
     }
@@ -170,7 +185,7 @@ export default function NewTaskModal({
                           key={m.id}
                           className="task-member-option"
                           onClick={() => {
-                            setForm({ ...form, assigned_to_id: m.id })
+                            setForm({ ...form, assignedToId: m.id })
                             setShowMemberDropdown(false)
                           }}
                         >
@@ -200,9 +215,18 @@ export default function NewTaskModal({
                 <input
                   type="date"
                   className="modal-input"
-                  value={form.due_date}
-                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
+                  value={form.dueDate}
+                  min={today}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    setForm({ ...form, dueDate: selectedDate });
+                    
+                    if (selectedDate && selectedDate < today) {
+                      setError('La fecha límite no puede ser una fecha pasada. Por favor, selecciona una fecha a partir de hoy.');
+                    } else {
+                      setError(''); 
+                    }
+                  }}
                 />
               </div>
 
@@ -291,7 +315,11 @@ export default function NewTaskModal({
         {/* Footer */}
         <div className="modal-footer">
           <button className="modal-btn-cancel" onClick={onClose}>Cancelar</button>
-          <button className="modal-btn-confirm" onClick={handleSubmit} disabled={loading}>
+          <button 
+            className="modal-btn-confirm" 
+            onClick={handleSubmit} 
+            disabled={loading || isDateInvalid} 
+          >
             {loading ? 'Creando...' : 'Crear tarea →'}
           </button>
         </div>
