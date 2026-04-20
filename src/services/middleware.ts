@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/register']
+const PUBLIC_ROUTES = ['/login', '/register', '/auth/callback']
 const PROTECTED_PREFIX = ['/dashboard', '/workspace', '/profile']
+const CALLBACK_ROUTE = '/auth/callback'
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value
@@ -17,7 +18,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (token && isPublic) {
+  if (token && isPublic && pathname !== CALLBACK_ROUTE) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
@@ -42,5 +43,6 @@ export const config = {
     '/profile',
     '/login',
     '/register',
+    '/auth/callback',
   ],
 }

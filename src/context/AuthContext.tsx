@@ -7,6 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
+import Cookies from 'js-cookie'
 import { AuthService } from '@/services/auth.service'
 import type { User, LoginDto, RegisterDto } from '@/types'
 import { UserService } from '@/services/user.service'
@@ -29,33 +30,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      
-      // Si no hay token, no molestamos al servidor
+      const token = Cookies.get('access_token')
+
       if (!token) {
-        setIsLoading(false);
-        return;
+        setIsLoading(false)
+        return
       }
 
       try {
-        // Intentamos recuperar al usuario
-        const response = await UserService.getMe();
-        const userData = response.user || response;
-        setUser(userData);
-      } catch (error) {
-        // Si el token no sirve, simplemente lo borramos y 
-        // dejamos que el usuario vea el login normalmente.
-        console.warn("Sesión expirada o inválida, redirigiendo al login.");
-        localStorage.removeItem('token');
-        setUser(null);
+        const response = await UserService.getMe()
+        const userData = response.user || response
+        setUser(userData)
+      } catch {
+        Cookies.remove('access_token', { path: '/' })
+        setUser(null)
       } finally {
-        // Pase lo que pase, dejamos de mostrar la pantalla de carga
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    initAuth();
-  }, []);
+    initAuth()
+  }, [])
 
   const login = async (data: LoginDto) => {
     const res = await AuthService.login(data)
