@@ -21,7 +21,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
   const { activeWorkspace, setActiveWorkspace, workspaces, setWorkspaces } = useWorkspace()
 
   const [form, setForm] = useState({
-    project_name: activeWorkspace?.project_name ?? '',
+    project_name: activeWorkspace?.projectName ?? '',
     description: activeWorkspace?.description ?? '',
   })
   const [selectedColor, setSelectedColor] = useState(COLORS[0])
@@ -65,7 +65,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
             <div>
               <h2 className="modal-title">Editar espacio de trabajo</h2>
               <p className="modal-subtitle">
-                {activeWorkspace?.project_name} · Código {activeWorkspace?.access_code}
+                {activeWorkspace?.projectName} · Código {activeWorkspace?.accessCode}
               </p>
             </div>
             <button className="modal-close" onClick={onClose}>
@@ -128,7 +128,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
                 <label className="modal-label">Código de acceso</label>
                 <p className="modal-hint">El código no puede modificarse una vez creado el espacio</p>
                 <div className="edit-code-readonly">
-                  <span className="access-code-val">{activeWorkspace?.access_code ?? '——'}</span>
+                  <span className="access-code-val">{activeWorkspace?.accessCode ?? '——'}</span>
                   <span className="edit-code-lock">
                     <svg viewBox="0 0 14 14" fill="none">
                       <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
