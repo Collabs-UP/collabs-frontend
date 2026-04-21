@@ -12,15 +12,20 @@ function getTokenFromUrl() {
   const query = new URLSearchParams(window.location.search)
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
 
-  return (
-    query.get('token') ??
+  const token =
     query.get('access_token') ??
+    query.get('token') ??
     query.get('authToken') ??
-    hash.get('token') ??
     hash.get('access_token') ??
+    hash.get('token') ??
     hash.get('authToken') ??
     ''
-  )
+
+  if (token) {
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+
+  return token
 }
 
 export default function AuthCallbackPage() {
@@ -172,4 +177,3 @@ export default function AuthCallbackPage() {
     </main>
   )
 }
-

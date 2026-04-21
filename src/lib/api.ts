@@ -1,8 +1,13 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
+import { BACKEND_ORIGIN } from '@/lib/envs'
+
+const apiBaseUrl = BACKEND_ORIGIN
+  ? (BACKEND_ORIGIN.endsWith('/api') ? BACKEND_ORIGIN : `${BACKEND_ORIGIN}/api`)
+  : undefined
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
