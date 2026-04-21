@@ -1,5 +1,6 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
+import { BACKEND_ORIGIN } from '@/lib/envs'
 
 function withApiPrefix(url?: string) {
   if (!url) return '/api'
@@ -11,7 +12,7 @@ function withApiPrefix(url?: string) {
 }
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/api` : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
