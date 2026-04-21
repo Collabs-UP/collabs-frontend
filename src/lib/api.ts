@@ -1,13 +1,8 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
-import { BACKEND_ORIGIN } from '@/lib/envs'
-
-const apiBaseUrl = BACKEND_ORIGIN
-  ? (BACKEND_ORIGIN.endsWith('/api') ? BACKEND_ORIGIN : `${BACKEND_ORIGIN}/api`)
-  : undefined
 
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
