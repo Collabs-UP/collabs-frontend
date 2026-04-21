@@ -1,6 +1,15 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
 
+function withApiPrefix(url?: string) {
+  if (!url) return '/api'
+  if (/^https?:\/\//i.test(url)) return url
+  if (url.startsWith('/api/')) return url
+  if (url === '/api') return url
+  if (url.startsWith('/')) return `/api${url}`
+  return `/api/${url}`
+}
+
 const api = axios.create({
   baseURL: '/api',
   headers: {
@@ -10,6 +19,8 @@ const api = axios.create({
 
 // Interceptor de request
 api.interceptors.request.use((config) => {
+  config.url = withApiPrefix(config.url)
+
   const token = Cookies.get('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
