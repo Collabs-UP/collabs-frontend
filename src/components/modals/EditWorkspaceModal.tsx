@@ -21,7 +21,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
   const { activeWorkspace, setActiveWorkspace, workspaces, setWorkspaces } = useWorkspace()
 
   const [form, setForm] = useState({
-    projectName: activeWorkspace?.projectName ?? '',
+    project_name: activeWorkspace?.projectName ?? '',
     description: activeWorkspace?.description ?? '',
   })
   const [selectedColor, setSelectedColor] = useState(COLORS[0])
@@ -30,7 +30,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
   const [error, setError] = useState('')
 
   const handleSave = async () => {
-    if (!form.projectName.trim()) {
+    if (!form.project_name.trim()) {
       setError('El nombre del proyecto es obligatorio')
       return
     }
@@ -89,8 +89,8 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
                 <input
                   type="text"
                   className="modal-input"
-                  value={form.projectName}
-                  onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                  value={form.project_name}
+                  onChange={(e) => setForm({ ...form, project_name: e.target.value })}
                 />
                 <p className="modal-hint">Este nombre identifica tu espacio en el dashboard</p>
               </div>
@@ -156,7 +156,7 @@ export default function EditWorkspaceModal({ onClose, onSaved }: Props) {
                   <span className="preview-role">Admin</span>
                 </div>
                 <h3 className="preview-name">
-                  {form.projectName || 'Nombre del proyecto'}
+                  {form.project_name || 'Nombre del proyecto'}
                 </h3>
                 <p className="preview-desc">
                   {form.description || 'La descripción aparecerá aquí...'}
