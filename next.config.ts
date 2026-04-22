@@ -6,7 +6,15 @@ const backendOrigin =
   process.env.NEXT_PUBLIC_API_URL ??
   "";
 
-const normalizedBackendOrigin = backendOrigin.trim().replace(/\/$/, "");
+function normalizeBackendOrigin(value: string): string {
+  return value
+    .trim()
+    .replace(/^['\"]|['\"]$/g, "")
+    .replace(/\/+$/, "")
+    .replace(/\/api$/i, "");
+}
+
+const normalizedBackendOrigin = normalizeBackendOrigin(backendOrigin);
 
 const nextConfig: NextConfig = {
   async rewrites() {

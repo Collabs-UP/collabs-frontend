@@ -1,7 +1,6 @@
 import api from '@/lib/api'
 import Cookies from 'js-cookie'
 import type { LoginDto, RegisterDto, AuthResponse } from '@/types'
-import { BACKEND_ORIGIN } from '@/lib/envs'
 
 export const AuthService = {
   login: async (data: LoginDto): Promise<AuthResponse> => {
@@ -38,8 +37,7 @@ export const AuthService = {
   },
 
   startGoogleOAuth: () => {
-    window.location.href = BACKEND_ORIGIN
-      ? `${BACKEND_ORIGIN}/api/users/me/oauth/google`
-      : '/api/users/me/oauth/google'
+    // Keep OAuth bootstrap on current host; Next.js rewrites proxy /api to backend.
+    window.location.assign('/api/users/me/oauth/google')
   },
 }
