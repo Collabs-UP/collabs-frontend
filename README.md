@@ -110,9 +110,9 @@ collabs-frontend/
 
 | Nombre | Rol / Contribución | GitHub |
 |--------|--------------------|--------|
-| Diego Alberto Zárate | Frontend, UI/UX, maquetado, prototipado, testing | [@Diego-Zarate18](https://github.com/Diego-Zarate18) |
+| Diego Alberto Zárate | Backend, arquitectura, testing de API | [@Diego-Zarate18](https://github.com/Diego-Zarate18) |
 | Juan Camacho | Despliegue, documentación, QA | [@juanmcamacho](https://github.com/juanmcamacho) |
-| Brian Luis Ruiz Pérez | Backend, arquitectura, testing de API | [@MrX-zeta](https://github.com/MrX-zeta) |
+| Brian Luis Ruiz Pérez | Frontend, UI/UX, maquetado, prototipado, testing| [@MrX-zeta](https://github.com/MrX-zeta) |
 
 ---
 
